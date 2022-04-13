@@ -1,0 +1,10 @@
+{
+	"program": "adv-net.p4",
+	"language": "p4-16",
+	"targets": {
+		"custom": {
+			"auto-control-plane": false,
+			"program": "base.py"
+	   	}
+	}
+}
