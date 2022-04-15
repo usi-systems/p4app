@@ -9,9 +9,8 @@ const bit<8>  ICMP_ECHO_REPLY    = 0;
 const bit<8>  ICMP_ECHO_REQUEST  = 8;
 
 struct ingress_metadata_t {
-    bit<8> last_port_idx;
     bit<8> max_idx;
-    bit<9> exit_port;
+    bit<8> exit_idx;
 }
 
 header ethernet_t {

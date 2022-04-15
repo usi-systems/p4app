@@ -97,18 +97,35 @@ def add_table_entries(net, s, d, gateway):
 		match_fields={'hdr.ipv4.dstAddr': ['192.168.%d.0' % d, 24]},
 		action_name='ingress.set_nhop',
 		action_params={'port': gateway})
+def insert_info(net, topo):
+	for v in topo.V.keys():
+		r = net.get('r%d' % v)
+		r.insertTableEntry(table_name='ingress.switchid',
+			match_fields={'hdr.icmp.type': 8},
+			action_name='ingress.set_info',
+			action_params={'_size': len(topo.V[v])-1})
+		r.insertTableEntry(table_name='ingress.rnd_wlk',
+				match_fields={'meta.ing.exit_idx': 0xff},
+				action_name='ingress.drop_walk',
+				action_params={'dst_ip': ['192.168.%d.100' % v], 'dst_mac': '00:01:01:00:00:%02x' % v})
+		n_index = 0
+		for d in topo.V[v]:
+			r.insertTableEntry(table_name='ingress.rnd_wlk',
+				match_fields={'meta.ing.exit_idx': n_index},
+				action_name='ingress.set_nhop',
+				action_params={'port': d})
+			n_index = n_index + 1
 
 def run(topo_file):
 	input_topo = InputGraphTopo(topo_file)
 	net = P4Mininet(program=basic_prog, topo=input_topo)
 	net.start()
 	dijkstra(net, input_topo)
- 
-	s1 = net.get('r1')
-	print("about to read reg")
-	print(s1.readRegister('myReg', 1))
- 
- 
+	insert_info(net, input_topo)
+
+	r1 = net.get('r2')
+	r1.printTableEntries()
+
 	CLI(net)
 	net.stop()
 

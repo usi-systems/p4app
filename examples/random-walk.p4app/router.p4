@@ -5,32 +5,11 @@
 #include "parser.p4"
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-	action rewrite_mac(bit<48> smac) {
-		hdr.ethernet.srcAddr = smac;
-	}
-	table send_frame {
-		actions = {
-			rewrite_mac;
-			NoAction;
-		}
-		key = {
-			standard_metadata.egress_port: exact;
-		}
-		size = 256;
-		default_action = NoAction();
-	}
 	apply {
-		if (hdr.ipv4.isValid()) {
-		  send_frame.apply();
-		}
 	}
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-	register<bit<9>>(256) my_ports;
-	register<bit<8>>(1) port_size;
-	register<bit<8>>(1) last_idx;
-
 	action doDrop() {
 		mark_to_drop(standard_metadata);
 	}
@@ -38,16 +17,41 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 		standard_metadata.egress_spec = port;
 		hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
 	}
-	action round_robin(){
-		port_size.read(meta.ing.max_idx, 0); // read maximum index for ports
-		last_idx.read(meta.ing.last_port_idx, 0); // read last used port index
-		meta.ing.last_port_idx = meta.ing.last_port_idx + 1; // increment the port index
-		if(meta.ing.last_port_idx > meta.ing.max_idx) // set index to zero if it's larger the maximum
-			meta.ing.last_port_idx = 0;
-		last_idx.write(0, meta.ing.last_port_idx); // saving ghte last index in the register.
-
-		my_ports.read(standard_metadata.egress_spec, (bit<32>)meta.ing.last_port_idx); // set the exit port!
-		hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+	action set_info (bit<8> _size){
+		meta.ing.max_idx = _size;
+		bit<32> random_t;
+        random(random_t, (bit<32>)0, (bit<32>)_size);
+		meta.ing.exit_idx = (bit<8>) random_t;
+		if(hdr.ipv4.ttl < 3)
+			meta.ing.exit_idx = 0xff;
+	}
+	action drop_walk (bit<32> dst_ip, bit<48> dst_mac){
+		standard_metadata.egress_spec = 0;
+		hdr.ipv4.dstAddr = dst_ip;
+		hdr.ethernet.dstAddr = dst_mac;
+	}
+	table switchid {
+		actions = {
+			set_info;
+			NoAction;
+		}
+		key = {
+			hdr.icmp.type: exact;
+		}
+		size = 4;
+		default_action = NoAction();
+	}
+	table rnd_wlk {
+		actions = {
+			set_nhop;
+			drop_walk;
+			NoAction;
+		}
+		key = {
+			meta.ing.exit_idx: exact;
+		}
+		size = 256;
+		default_action = NoAction();
 	}
 	table ipv4_lpm {
 		actions = {
@@ -61,12 +65,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 		default_action = NoAction();
 	}
 	apply {
-		if(hdr.icmp.isValid() && hdr.icmp.type == ICMP_ECHO_REQUEST) {
-			round_robin();
-		}else if (hdr.ipv4.isValid()) {
-			ipv4_lpm.apply();
+		if (hdr.ipv4.isValid()) {
+			if(hdr.icmp.isValid()) {
+				if(switchid.apply().hit)
+					rnd_wlk.apply();
+				else
+					ipv4_lpm.apply();
+			}else	
+				ipv4_lpm.apply();
+			
 		}
 	}
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch(
+	ParserImpl(), 
+	verifyChecksum(), 
+	ingress(), 
+	egress(), 
+	computeChecksum(), 
+	DeparserImpl()
+) main;

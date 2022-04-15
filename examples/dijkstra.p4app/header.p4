@@ -26,16 +26,12 @@ header ipv4_t {
     bit<32> dstAddr;
 }
 
-
 struct metadata {
-    @name("ingress_metadata")
     ingress_metadata_t   ingress_metadata;
 }
 
 struct headers {
-    @name("ethernet")
     ethernet_t ethernet;
-    @name("ipv4")
     ipv4_t     ipv4;
 }
 
