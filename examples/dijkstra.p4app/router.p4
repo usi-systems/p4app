@@ -34,21 +34,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    action echo() {
-        standard_metadata.egress_port = standard_metadata.ingress_port;
-        hdr.ipv4.ttl = 0x13;
-    }
-    table self_ip {
-        actions = {
-            echo;
-            NoAction;
-        }
-        key = {
-            hdr.ipv4.dstAddr: exact;
-        }
-        size = 1024;
-        default_action = NoAction();
-    }
     table ipv4_lpm {
         actions = {
             doDrop;
@@ -62,11 +47,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if (hdr.ipv4.isValid()) {
-            if(self_ip.apply().miss){
-                ipv4_lpm.apply();
-            }
-        }
+        if (hdr.ipv4.isValid())
+            ipv4_lpm.apply();
     }
 }
 

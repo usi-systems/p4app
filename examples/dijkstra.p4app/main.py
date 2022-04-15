@@ -89,9 +89,9 @@ def dijkstra(net, topo):
 		for j in range(number_of_routers):
 			if i == j: continue
 			gateways = shortest_paths[i][j]
-			add_connection_to_net(net, j + 1, i + 1, gateways[0])
+			add_table_entries(net, j + 1, i + 1, gateways[0])
 
-def add_connection_to_net(net, s, d, gateway):
+def add_table_entries(net, s, d, gateway):
 	r = net.get('r%d' % s)
 	r.insertTableEntry(table_name='ingress.ipv4_lpm',
 		match_fields={'hdr.ipv4.dstAddr': ['192.168.%d.0' % d, 24]},
