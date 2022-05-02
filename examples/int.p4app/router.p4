@@ -12,9 +12,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 		hdr.ipv4.srcAddr = hdr.ipv4.dstAddr;
 		hdr.ipv4.dstAddr = tmp;
 	}
-	action f() {
-
-	}
 	table snd_INT {
 		actions = {
 			snd_src;
@@ -26,19 +23,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 		size = 256;
 		default_action = NoAction();
 	}
-	table fake {
-		actions = {
-			f;
-			NoAction;
-		}
-		key = {
-			standard_metadata.ingress_global_timestamp: 	exact;
-		}
-		size = 256;
-		default_action = NoAction();
-	}
 	apply {
-		fake.apply();
 		if(hdr.int_info.isValid())
 			if(hdr.icmp.type == ICMP_ECHO_REQUEST)
 				snd_INT.apply();

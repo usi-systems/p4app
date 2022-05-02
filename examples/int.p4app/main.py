@@ -108,10 +108,6 @@ def insert_info(net, topo):
 			match_fields={'hdr.int_info.size': 10},
 			action_name='egress.snd_src',
 			action_params={})
-		r.insertTableEntry(table_name='egress.fake',
-			match_fields={'standard_metadata.ingress_global_timestamp': 10},
-			action_name='egress.f',
-			action_params={})
 		n_index = 0
 		for d in topo.V[v]:
 			r.insertTableEntry(table_name='ingress.rnd_wlk',
