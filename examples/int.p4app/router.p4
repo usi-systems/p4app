@@ -46,6 +46,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+	register<bit<48>>(1) myReg;
+	register<bit<48>>(1) lastTime;
+
 	action doDrop() {
 		mark_to_drop(standard_metadata);
 	}
@@ -64,7 +67,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 		hdr.ints[int_index].setValid();
 		hdr.ints[int_index].type = INT_RTT;
 		hdr.ints[int_index].code = _id;
-		hdr.ints[int_index].value = standard_metadata.ingress_global_timestamp;
+		// hdr.ints[int_index].value = standard_metadata.ingress_global_timestamp;
+		bit<48>pkt_cnt;
+		myReg.read(pkt_cnt, 0);
+		hdr.ints[int_index].value = pkt_cnt;
 		// hdr.ints[int_index].value = 0xF5F4F3F2F1F0;
 		hdr.ints[int_index].is_valid = 0x01;
 
@@ -105,6 +111,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 		default_action = NoAction();
 	}
 	apply {
+		bit<48>last_time;
+		lastTime.read(last_time, 0);
+		if(standard_metadata.ingress_global_timestamp - last_time > 100000){
+			lastTime.write(0, standard_metadata.ingress_global_timestamp);
+			myReg.write(0, 0);
+		}
+		bit<48>pkt_cnt;
+		myReg.read(pkt_cnt, 0);
+		pkt_cnt = pkt_cnt + 1;
+		myReg.write(0, pkt_cnt);
+
 		if (hdr.ipv4.isValid()) {
 			if(hdr.icmp.isValid()) {
 				if(switchid.apply().hit)
