@@ -16,6 +16,7 @@ const bit<16>  INT_HEADER_LEN    = 0x9;
 struct ingress_metadata_t {
     bit<8> max_idx;
     bit<8> exit_idx;
+    bit<48> ingress_time;
 }
 
 header ethernet_t {

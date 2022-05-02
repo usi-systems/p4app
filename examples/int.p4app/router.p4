@@ -24,6 +24,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 		default_action = NoAction();
 	}
 	apply {
+		{
+			bit<8> int_index = hdr.int_info.size - 1;
+			hdr.ints[int_index].value = standard_metadata.egress_global_timestamp - meta.ing.ingress_time;
+		}
 		if(hdr.int_info.isValid())
 			if(hdr.icmp.type == ICMP_ECHO_REQUEST)
 				snd_INT.apply();
@@ -96,6 +100,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 		default_action = NoAction();
 	}
 	apply {
+		meta.ing.ingress_time = standard_metadata.ingress_global_timestamp;
 		bit<48>last_time;
 		lastTime.read(last_time, 0);
 		if(standard_metadata.ingress_global_timestamp - last_time > 100000){
