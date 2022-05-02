@@ -24,7 +24,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 		default_action = NoAction();
 	}
 	apply {
-		{
+		if(hdr.int_info.isValid()) {
 			bit<8> int_index = hdr.int_info.size - 1;
 			hdr.ints[int_index].value = standard_metadata.egress_global_timestamp - meta.ing.ingress_time;
 		}

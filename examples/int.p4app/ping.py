@@ -21,7 +21,7 @@ def print_packet(packet):
 				value = value << 8
 				value = value + buf[bindex+ 3 + j]
 			if(i > 0):
-				print("isValid:", is_valid, ", type: ", type, ", code: ", code, ", value:", value)
+				print("isValid:", is_valid, ", type: ", type, ", code: ", code, ", value:", (int)(value/1000))
 			old_value = value
 		print("---------")
 
